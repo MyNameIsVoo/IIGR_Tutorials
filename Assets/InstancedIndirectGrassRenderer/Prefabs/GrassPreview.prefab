@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6328635195639277288}
   - component: {fileID: 5929196189239621641}
+  - component: {fileID: 2751220476629354952}
   m_Layer: 0
   m_Name: GrassPreview
   m_TagString: Untagged
@@ -57,3 +58,15 @@ MonoBehaviour:
   _grassLayer:
     serializedVersion: 2
     m_Bits: 64
+--- !u!114 &2751220476629354952
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6647428909559994748}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70fbf58ba7d6c47468f47fd5e21a1476, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

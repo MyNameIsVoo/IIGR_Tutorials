@@ -1,7 +1,13 @@
-﻿using IIGR.Data;
+﻿using IIGR.Culling;
+using IIGR.Data;
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 namespace IIGR
 {
@@ -43,7 +49,6 @@ namespace IIGR
         private Camera _mainCamera;
         private int _layerGrassIndex;
 
-        private bool _isActiveSaving;
         public bool IsActiveBuildCulling { get; private set; }
 
         public static InstancedIndirectGrassRenderer Instance { get; private set; }
@@ -133,7 +138,6 @@ namespace IIGR
                 EditorUtility.ClearProgressBar();
 #endif
             IsActiveBuildCulling = false;
-            _isActiveSaving = false;
             RebuildGrass();
         }
 #endif
@@ -170,7 +174,64 @@ namespace IIGR
             }
         }
 
-        internal void RebuildGrass()
+		internal IEnumerator BakeCullingAsync(Action callback)
+		{
+			yield return new WaitForSeconds(1f);
+
+			if (Massive.VisibleAmount == 0)
+			{
+				Debug.LogWarning("No grass data found!");
+				yield break;
+			}
+			if (IsActiveBuildCulling)
+			{
+				Debug.Log("Waiting the InstancedIndirectGrassRenderer complete calculating...");
+				yield break;
+			}
+
+			var timer = new Stopwatch();
+			timer.Start();
+
+			IsActiveBuildCulling = true;
+			var grassCullingObjects = FindObjectsOfType<MonoBehaviour>()
+			.Where(x => x is IGrassCulling && x.gameObject.activeInHierarchy)
+			.Cast<IGrassCulling>()
+			.ToList();
+
+			Debug.Log($"Bake Culling. Found: {grassCullingObjects?.Count ?? 0} objects");
+
+			if (grassCullingObjects == null || grassCullingObjects.Count == 0)
+			{
+				Debug.LogWarning("Not found grass culling objects in the current scene!");
+#if UNITY_EDITOR
+				if (!Application.isPlaying)
+					EditorUtility.ClearProgressBar();
+#endif
+				IsActiveBuildCulling = false;
+				callback?.Invoke();
+				yield break;
+			}
+
+#if UNITY_EDITOR
+			if (!Application.isPlaying)
+				EditorUtility.DisplayProgressBar("Bake grass culling", $"Calculating {grassCullingObjects.Count} objects", 0);
+#endif
+			foreach (var cullingObject in grassCullingObjects)
+				cullingObject.CalculateGrassCulling(true);
+			yield return Massive.HideGrassInAreaAsync(grassCullingObjects);
+			yield return null;
+
+			IsActiveBuildCulling = false;
+#if UNITY_EDITOR
+			if (!Application.isPlaying)
+				EditorUtility.ClearProgressBar();
+#endif
+			timer.Stop();
+			Debug.Log($"Bake Culling Async Completed: {timer.Elapsed}");
+			callback?.Invoke();
+		}
+
+		internal void RebuildGrass()
         {
             Instance = this;
             Init();

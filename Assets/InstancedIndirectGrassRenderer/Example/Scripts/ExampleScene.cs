@@ -11,6 +11,7 @@ namespace IIGR_Example
         {
 			_canvas.interactable = true;
 			InstancedIndirectGrassRenderer.Instance.RebuildGrass();
+            StartCoroutine(InstancedIndirectGrassRenderer.Instance.BakeCullingAsync(null));
 		}
     }
 }
