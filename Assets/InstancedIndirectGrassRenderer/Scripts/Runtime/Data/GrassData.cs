@@ -12,12 +12,16 @@ namespace IIGR.Data
 
         public void Add(List<Vector3> positions, List<float> heights)
         {
-            if (positions.IsNotNull())
-                Positions.AddRange(positions);
+			if (positions == null || heights == null)
+				return;
 
-            if (heights.IsNotNull())
-                Heights.AddRange(heights);
-        }
+			int minLength = Mathf.Min(positions.Count, heights.Count);
+			if (minLength > 0)
+			{
+				Positions.AddRange(positions.GetRange(0, minLength));
+				Heights.AddRange(heights.GetRange(0, minLength));
+			}
+		}
 
         public bool IsNotNull() => Positions.IsNotNull() && Heights.IsNotNull();
 

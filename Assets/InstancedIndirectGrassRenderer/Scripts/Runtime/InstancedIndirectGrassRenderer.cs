@@ -44,14 +44,15 @@ namespace IIGR
         private ComputeBuffer _argsBuffer;
         private GrassCellData[] _cellDatas;
         private float _minX, _minZ, _maxX, _maxZ;
-        private List<int> _visibleCellIDList = new List<int>();
+        private readonly List<int> _visibleCellIDList = new List<int>();
         private Plane[] _cameraFrustumPlanes = new Plane[6];
         private Camera _mainCamera;
         private int _layerGrassIndex;
 
         public bool IsActiveBuildCulling { get; private set; }
+		public bool IsBusy => IsActiveBuildCulling;
 
-        public static InstancedIndirectGrassRenderer Instance { get; private set; }
+		public static InstancedIndirectGrassRenderer Instance { get; private set; }
 
         private void Awake()
         {
