@@ -14,15 +14,30 @@ namespace IIGR_Example
     {
         public const int MaxAmount = 40000000;
 
+#if UNITY_EDITOR
+		[SerializeField] private bool _redrawOnChange;
+		[Space(20)]
+#endif
+
 		[Range(100, MaxAmount)]
         [SerializeField] private int _instanceCount = 100000;
 		[SerializeField] private Vector2 _heightLimits = new Vector2(0.2f, 0.6f);
         [Range(0.1f, 3f)]
 		[SerializeField] private float _areaOffset = 0.5f;
 
-        private int _cacheCount = -1;
+		public Action OnBakingStart;
+		public Action OnBakingFinish;
 
-        private void Update()
+		private int _cacheCount = -1;
+
+#if UNITY_EDITOR
+		private void OnEnable()
+		{
+			_sliderValue = _instanceCount;
+		}
+#endif
+
+		private void Update()
         {
             UpdatePosIfNeeded();
         }
@@ -30,9 +45,77 @@ namespace IIGR_Example
         private void OnDisable()
         {
             _cacheCount = -1;
-        }
+		}
 
-        private void UpdatePosIfNeeded()
+#if UNITY_EDITOR
+		private void OnValidate()
+		{
+			if (!_redrawOnChange || !enabled
+				|| InstancedIndirectGrassRenderer.Instance == null || InstancedIndirectGrassRenderer.Instance.IsBusy)
+				return;
+
+			_cacheCount = -1;
+			_sliderValue = _instanceCount;
+			UpdatePosIfNeeded();
+		}
+
+		private Rect windowRect = new Rect(20, 400, 450, 100);
+		private int _sliderValue;
+
+		private void OnGUI()
+		{
+			if (InstancedIndirectGrassRenderer.Instance == null)
+				return;
+
+			windowRect = GUI.Window(0, windowRect, DrawStatisticsWindow, "Custom Data");
+
+			void DrawStatisticsWindow(int windowID)
+			{
+				GUILayout.BeginVertical();
+
+				var fontStyle = new GUIStyle()
+				{
+					fontSize = 20,
+					normal = { textColor = Color.white }
+				};
+				GUILayout.Label($"Instance Count: {_sliderValue.ToString("N0")}", fontStyle);
+				_sliderValue = Mathf.Max(1, (int)GUILayout.HorizontalSlider(_sliderValue, 1, MaxAmount));
+
+				GUI.enabled = _instanceCount != _sliderValue;
+
+				if (GUILayout.Button("Apply"))
+					_instanceCount = _sliderValue;
+				if (GUILayout.Button("Bake"))
+					Bake();
+
+				GUI.enabled = true;
+				GUILayout.EndVertical();
+
+				GUI.DragWindow();
+			}
+		}
+#endif
+
+		[ContextMenu("Bake")]
+		public void Bake()
+		{
+			if (InstancedIndirectGrassRenderer.Instance == null)
+			{
+				Debug.LogError("The InstancedIndirectGrassRenderer is Null!");
+				return;
+			}
+			if (InstancedIndirectGrassRenderer.Instance.IsBusy)
+			{
+				Debug.Log("Waiting the InstancedIndirectGrassRenderer complete calculating...");
+				return;
+			}
+
+			OnBakingStart?.Invoke();
+			UpdatePosIfNeeded();
+			InstancedIndirectGrassRenderer.Instance.StartCoroutine(InstancedIndirectGrassRenderer.Instance.BakeCullingAsync(OnBakingFinish));
+		}
+
+		private void UpdatePosIfNeeded()
         {
             if (InstancedIndirectGrassRenderer.Instance == null || _instanceCount == _cacheCount || InstancedIndirectGrassRenderer.Instance.Massive.Data == null)
                 return;

@@ -1,0 +1,20 @@
+{
+    "name": "IIGR_Example_Editor_AD",
+    "rootNamespace": "IIGR_Editor",
+    "references": [
+        "GUID:487822bbfe689f040bc05e8d52453f04",
+        "GUID:478a2357cc57436488a56e564b08d223",
+        "GUID:de57c3dff48338f46ae4c359a679a51e"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

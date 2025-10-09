@@ -1,5 +1,6 @@
 ﻿using IIGR.Culling;
 using IIGR.Data;
+using IIGR.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -11,10 +12,14 @@ using Debug = UnityEngine.Debug;
 
 namespace IIGR
 {
-    [InitializeOnLoad, DisallowMultipleComponent]
+    [ExecuteAlways, InitializeOnLoad, DisallowMultipleComponent]
     public class InstancedIndirectGrassRenderer : MonoBehaviour
     {
+#if UNITY_EDITOR
+		[SerializeField] private bool _drawGizmos = true;
 		[Space(20)]
+#endif
+
 		[Header("Settings")]
 
         [SerializeField, Min(1)] private float _drawDistance = 300;
@@ -29,6 +34,9 @@ namespace IIGR
         [field: SerializeField] public bool CanUpdateGrass { get; private set; } = true;
         [SerializeField] private float _boundSize = 1;
 		[SerializeField] private float _cellSize = 10f;
+#if UNITY_EDITOR
+		[SerializeField] private float _cellHeight = 1f;
+#endif
 		[SerializeField] private bool _shouldBatchDispatch = true;
 		[SerializeField] private LayerMask _grassLayer;
 
@@ -36,7 +44,8 @@ namespace IIGR
 
         private int _cellCountX = -1;
         private int _cellCountZ = -1;
-        private int _instanceCountCache = -1;
+		private int _dispatchCount = -1;
+		private int _instanceCountCache = -1;
         private Mesh _cachedGrassMesh;
         private ComputeBuffer _allInstancesPosWSBuffer;
         private ComputeBuffer _allInstancesHeightBuffer;
@@ -51,6 +60,10 @@ namespace IIGR
 
         public bool IsActiveBuildCulling { get; private set; }
 		public bool IsBusy => IsActiveBuildCulling;
+
+#if UNITY_EDITOR
+		private Rect _windowRect = new Rect(20, 20, 450, 250);
+#endif
 
 		public static InstancedIndirectGrassRenderer Instance { get; private set; }
 
@@ -93,7 +106,8 @@ namespace IIGR
             _cullingComputeShader.SetMatrix("_VPMatrix", vp);
             _cullingComputeShader.SetFloat("_MaxDrawDistance", _drawDistance);
 
-            for (var i = 0; i < _visibleCellIDList.Count; i++)
+			_dispatchCount = 0;
+			for (var i = 0; i < _visibleCellIDList.Count; i++)
             {
                 var targetCellFlattenID = _visibleCellIDList[i];
                 var memoryOffset = 0;
@@ -113,7 +127,8 @@ namespace IIGR
 
                 var threadGroup = Mathf.Clamp(Mathf.CeilToInt(jobLength / 64f), 1, 65535);
                 _cullingComputeShader.Dispatch(0, threadGroup, 1, 1);
-            }
+				_dispatchCount++;
+			}
 
             ComputeBuffer.CopyCount(_visibleInstancesOnlyPosWSIDBuffer, _argsBuffer, 4);
 
@@ -141,11 +156,71 @@ namespace IIGR
             IsActiveBuildCulling = false;
             RebuildGrass();
         }
+
+		private void OnGUI()
+		{
+			if (Instance == null)
+				return;
+
+			_windowRect = GUI.Window(1, _windowRect, DrawStatisticsWindow, "Grass Data");
+
+			void DrawStatisticsWindow(int windowID)
+			{
+				GUILayout.BeginVertical();
+				GUI.enabled = !IsBusy;
+
+				var fontStyle = new GUIStyle()
+				{
+					fontSize = 20,
+					normal = { textColor = Color.white }
+				};
+
+				GUILayout.Label($"After CPU cell frustum culling,\n" +
+					$"-Visible cell count = {_visibleCellIDList.Count}/{_cellCountX * _cellCountZ}\n" +
+					$"-Real compute dispatch count = {_dispatchCount}\n(saved by batching = {_visibleCellIDList.Count - _dispatchCount})", fontStyle);
+
+				GUILayout.Space(20);
+
+				if (Massive != null)
+				{
+					GUILayout.Label($"Instanced Count: {Massive.VisibleAmount.ToString("N0")}", fontStyle);
+					GUILayout.Space(20);
+				}
+
+				GUILayout.Label($"Draw Distance: {_drawDistance}", fontStyle);
+				_drawDistance = Mathf.Max(1, (int)GUILayout.HorizontalSlider(_drawDistance, 1, 300));
+
+				var toggleStyle = new GUIStyle(GUI.skin.toggle);
+				toggleStyle.fontSize = 20;
+				toggleStyle.padding.left = 30;
+				_shouldBatchDispatch = GUILayout.Toggle(_shouldBatchDispatch, "ShouldBatchDispatch", toggleStyle);
+
+				GUI.enabled = true;
+				GUILayout.EndVertical();
+
+				GUI.DragWindow();
+			}
+		}
+
+		private void OnDrawGizmos()
+		{
+			if (!_drawGizmos || Instance == null || Massive == null || !Massive.CellDatas.IsNotNull())
+				return;
+
+			Gizmos.color = Color.green;
+
+			foreach (var cell in Massive.CellDatas)
+				Gizmos.DrawWireCube(cell.Center + new Vector3(0f, _cellHeight * 0.5f, 0f), new Vector3(_cellSize, _cellHeight, _cellSize));
+		}
 #endif
 
-        public void AddRange(GrassData grassData, bool clearData = false)
+		public void AddRange(GrassData grassData, bool clearData = false)
         {
-            Massive.AddRange(grassData, clearData);
+#if UNITY_EDITOR
+			if (Massive == null || Massive.Data == null)
+				Init();
+#endif
+			Massive.AddRange(grassData, clearData);
         }
 
         public void Recreate()
@@ -369,6 +444,6 @@ namespace IIGR
             Massive.CellDatas = _cellDatas;
             _mainCamera = Camera.main;
             _layerGrassIndex = (int)Mathf.Log(_grassLayer.value, 2);
-        }
+		}
     }
 }

@@ -17,7 +17,7 @@ namespace IIGR
 
 		private bool _isActiveHiddenProcess;
 		private List<HiddenGrassArea> _hiddenGrassAreas = new();
-		private InstancedIndirectGrassRenderer _grassRenderer;
+		private readonly InstancedIndirectGrassRenderer _grassRenderer;
 
 		public GrassMassive(InstancedIndirectGrassRenderer grassRenderer)
 		{
@@ -37,6 +37,9 @@ namespace IIGR
 
 		public void Clear()
 		{
+			if (_grassRenderer == null)
+				return;
+
 			Data.Clear();
 			CellDatas = null;
 			UpdateTotalGrassAmount();

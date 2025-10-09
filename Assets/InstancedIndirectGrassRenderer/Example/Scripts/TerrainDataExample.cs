@@ -36,7 +36,7 @@ namespace IIGR_Example
 
 #if UNITY_EDITOR
 		[ContextMenu("Build Grass")]
-		private void CalculateObject()
+		public void CalculateObject()
 		{
 			CalculatePoints();
 		}

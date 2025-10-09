@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace IIGR.Utils
 {
@@ -13,5 +14,15 @@ namespace IIGR.Utils
         {
             return list.Count != 0;
         }
-    }
+
+		public static bool IsNotEmpty<T>(this IEnumerable<T> list)
+		{
+			return list.Any();
+		}
+
+		public static bool IsNotNull<T>(this T[] list)
+		{
+			return list != null && list.Length != 0;
+		}
+	}
 }
