@@ -1481,6 +1481,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 5929196189239621641, guid: a7a546d00c052144898e023830d1d13e,
         type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5929196189239621641, guid: a7a546d00c052144898e023830d1d13e,
+        type: 3}
       propertyPath: _cellHeight
       value: 5
       objectReference: {fileID: 0}

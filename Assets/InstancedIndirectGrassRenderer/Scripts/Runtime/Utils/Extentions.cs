@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace IIGR.Utils
 {
@@ -23,6 +24,11 @@ namespace IIGR.Utils
 		public static bool IsNotNull<T>(this T[] list)
 		{
 			return list != null && list.Length != 0;
+		}
+
+		public static SerializableVector3 ToSerializableVector3(this Vector3 thiz)
+		{
+			return new SerializableVector3(thiz);
 		}
 	}
 }

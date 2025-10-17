@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -26,6 +27,7 @@ namespace IIGR
 		[SerializeField] private UnityEngine.Rendering.ShadowCastingMode _shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
 		[SerializeField] private bool _receiveShadows = true;
         [SerializeField] private Material _instanceMaterial;
+		[SerializeField] private string _savePath;
 
 		[Header("Internal")]
 		[SerializeField] private ComputeShader _cullingComputeShader;
@@ -58,12 +60,26 @@ namespace IIGR
         private Camera _mainCamera;
         private int _layerGrassIndex;
 
-        public bool IsActiveBuildCulling { get; private set; }
-		public bool IsBusy => IsActiveBuildCulling;
+		private bool _isActiveSaving;
+		public bool IsActiveBuildCulling { get; private set; }
+		public bool IsBusy => IsActiveBuildCulling || _isActiveSaving;
 
 #if UNITY_EDITOR
 		private Rect _windowRect = new Rect(20, 20, 450, 250);
 #endif
+
+		public string SavePath
+		{
+			get
+			{
+				if (!string.IsNullOrEmpty(_savePath))
+					return $"/{Path.Combine(_savePath, "GrassData.dat")}";
+
+				return "/Temp/GrassData.dat";
+			}
+		}
+
+		public bool IsExistSaveData => File.Exists(CommonUtils.GetPath(SavePath));
 
 		public static InstancedIndirectGrassRenderer Instance { get; private set; }
 
@@ -154,7 +170,8 @@ namespace IIGR
                 EditorUtility.ClearProgressBar();
 #endif
             IsActiveBuildCulling = false;
-            RebuildGrass();
+			_isActiveSaving = false;
+			RebuildGrass();
         }
 
 		private void OnGUI()
@@ -305,6 +322,52 @@ namespace IIGR
 			timer.Stop();
 			Debug.Log($"Bake Culling Async Completed: {timer.Elapsed}");
 			callback?.Invoke();
+		}
+
+		public void SaveData()
+		{
+			var timer = new Stopwatch();
+			timer.Start();
+
+			CommonUtils.WriteFileBin<GrassSaveData>(Massive.Data.ToSaveData(), SavePath);
+
+			timer.Stop();
+			Debug.Log($"SaveData Completed: {timer.Elapsed}");
+		}
+
+		public void LoadDataAsync()
+		{
+			var timer = new Stopwatch();
+			timer.Start();
+
+#if UNITY_EDITOR
+			if (!Application.isPlaying)
+				EditorUtility.DisplayProgressBar("Load data", $"Loading data from: {SavePath}", 0);
+#endif
+
+			_isActiveSaving = true;
+			Init();
+			ThreadedDataRequester.RequestData(() => CommonUtils.ReadFileBin<GrassSaveData>(SavePath)?.ToGrassData(), OnSaveLoaded);
+
+			void OnSaveLoaded(object saveData)
+			{
+#if UNITY_EDITOR
+				if (!Application.isPlaying)
+					EditorUtility.ClearProgressBar();
+#endif
+
+				if (saveData == null || saveData is not GrassData grassData)
+				{
+					timer.Stop();
+					Debug.LogError($"Data is empty: {timer.Elapsed}");
+					return;
+				}
+
+				Massive.AddRange(grassData);
+				_isActiveSaving = false;
+				timer.Stop();
+				Debug.Log($"LoadData Completed: {timer.Elapsed}");
+			}
 		}
 
 		internal void RebuildGrass()

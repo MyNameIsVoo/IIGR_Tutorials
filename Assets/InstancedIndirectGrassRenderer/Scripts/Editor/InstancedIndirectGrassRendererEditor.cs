@@ -40,6 +40,18 @@ namespace IIGR_Editor
 				EditorApplication.delayCall = InstancedIndirectGrassRenderer.Instance.RebuildGrass;
 			EditorGUILayout.EndHorizontal();
 
+			EditorGUILayout.BeginHorizontal();
+			var hasSaveData = InstancedIndirectGrassRenderer.Instance.Massive?.Data?.IsNotNull() ?? false;
+			GUI.enabled = hasSaveData && !isBusy;
+			if (GUILayout.Button($"Save{(hasSaveData ? " [it can takes a lot of time]" : " [data is empty]")}"))
+				EditorApplication.delayCall = InstancedIndirectGrassRenderer.Instance.SaveData;
+			var isExistSaveData = InstancedIndirectGrassRenderer.Instance.IsExistSaveData;
+			GUI.enabled = isExistSaveData && !isBusy;
+			if (GUILayout.Button($"Load{(isExistSaveData ? " [it can takes a lot of time]" : " [save not found]")}"))
+				EditorApplication.delayCall = InstancedIndirectGrassRenderer.Instance.LoadDataAsync;
+			GUI.enabled = !isBusy;
+			EditorGUILayout.EndHorizontal();
+
 			GUI.enabled = true;
 		}
 

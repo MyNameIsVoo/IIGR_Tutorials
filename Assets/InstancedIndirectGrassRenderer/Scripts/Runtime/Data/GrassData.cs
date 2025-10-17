@@ -1,5 +1,6 @@
 ﻿using IIGR.Utils;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace IIGR.Data
@@ -36,5 +37,22 @@ namespace IIGR.Data
             Positions.Clear();
             Heights.Clear();
         }
-    }
+
+		public GrassSaveData ToSaveData() => new GrassSaveData(Positions.Select(x => x.ToSerializableVector3()), Heights);
+	}
+
+	[System.Serializable]
+	public class GrassSaveData
+	{
+		public List<SerializableVector3> Positions = new();
+		public List<float> Heights = new();
+
+		public GrassSaveData(IEnumerable<SerializableVector3> positions, IEnumerable<float> heights)
+		{
+			Positions.AddRange(positions);
+			Heights.AddRange(heights);
+		}
+
+		public GrassData ToGrassData() => new GrassData(Positions.Select(x => x.ToVector3()), Heights);
+	}
 }
